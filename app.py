@@ -6,37 +6,33 @@ import plotly.graph_objects as go
 
 # --- 1. 網頁核心外觀配置 ---
 st.set_page_config(page_title="環境感知量化沙盒 V04", page_icon="🔮", layout="wide")
-st.title("🔮 量化投資沙盒完全體 (環境切換 + 雲端清單版)")
-st.markdown("已實裝 **華爾街 Regime-Switching 引擎** 與 **Google Sheet 遠端連動清單**")
+st.title("🔮 量化投資沙盒完全體 (環境切換 + 雲端清單對比強化版)")
+st.markdown("已實裝 **華爾街 Regime-Switching 引擎**、**Google Sheet 遠端連動** 與 **🌟高辨識度智能區塊底色**")
 
-# --- 2. 側邊欄控制台 (🌟 新增 Google Sheet 連動) ---
+# --- 2. 側邊欄控制台 (保持完美美股雲端連動機制) ---
 st.sidebar.header("⚙️ 全自動大掃描設定")
 
-# 🚨🚨🚨 請將你的 Google 試算表「共用連結」貼在下方的引號裡面 🚨🚨🚨
+# 🚨🚨🚨 請記得將你的【美股 Google 試算表】共用連結貼在下方的引號裡面 🚨🚨🚨
 GSHEET_URL = "https://docs.google.com/spreadsheets/d/1YuF63YTtUfzGQ70Wu1Bc_xSF9VxBAfFQGYHdP6-WUFk/edit?usp=sharing"
 
-@st.cache_data(ttl=60) # 快取 60 秒，手機改完試算表，1分鐘後網頁就會自動抓到新資料
+@st.cache_data(ttl=60) # 快取 60 秒同步一次
 def get_tickers_from_sheet(url):
     try:
         if "docs.google.com" not in url:
             return "NVDA, AAPL, TSLA, MSFT, AMD"
-        # 網址轉換魔法：將共用網址轉為 csv 導出網址
         csv_url = url.split("/edit")[0] + "/export?format=csv"
         df = pd.read_csv(csv_url, header=None)
-        # 抓取第一欄 (A欄) 的所有內容，轉大寫並去除空白
         tickers = df.iloc[:, 0].dropna().astype(str).str.strip().str.upper().tolist()
-        # 過濾掉可能不小心打進去的中文 (確保只留下英文代號)
         valid_tickers = [t for t in tickers if not any(c >= '\u4e00' and c <= '\u9fff' for c in t) and len(t) > 0]
         if not valid_tickers:
             return "NVDA, AAPL, TSLA, MSFT, AMD"
         return ", ".join(valid_tickers)
     except Exception as e:
-        return "NVDA, AAPL, TSLA, MSFT, AMD" # 若讀取失敗，預設顯示這五檔
+        return "NVDA, AAPL, TSLA, MSFT, AMD"
 
-# 抓取雲端名單
+# 抓取雲端美股名單
 default_tickers = get_tickers_from_sheet(GSHEET_URL)
 
-# 將單行輸入改為多行區塊 (text_area)，名單變長時手機比較好滑
 tickers_input = st.sidebar.text_area(
     "📡 當前雲端同步清單 (新增股票請至試算表修改)", 
     default_tickers, 
@@ -47,7 +43,7 @@ ticker_list = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
 
 backtest_days = st.sidebar.slider("歷史回測天數設定", min_value=100, max_value=500, value=300, step=50)
 
-# 核心新功能：大膽/謹慎環境切換閥
+# 核心環境感知開關
 market_posture = st.sidebar.selectbox(
     "⚖️ 當前市場防禦姿態 (環境切換開關)",
     ["🛡️ 標準平衡型", "🚀 大膽進攻型", "🥶 極度謹慎型"],
@@ -64,7 +60,7 @@ def draw_progress_bar(score, active_char):
         empty_count = 9
     return f"[{active_char * filled_count}{'░' * empty_count}]"
 
-# --- 4. 技術指標核心計算大腦 ---
+# --- 4. 技術指標核心計算大腦 (精準保留風控與濾網因子) ---
 def calculate_indicators(df):
     high_low_diff = (df['High'] - df['Low']).replace(0, 0.001) 
     mf_multiplier = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / high_low_diff
@@ -111,7 +107,7 @@ def calculate_indicators(df):
     df['MACD_Shrink'] = macd_shrink
     return df
 
-# --- 5. 環境感知 5 大策略回測引擎 ---
+# --- 5. 歷史回測引擎 (精準保留美股大開大合原始設定) ---
 def run_backtest_engine(df, strategy_name, days, posture):
     valid_df = df.dropna(subset=['200MA', 'ROC14', 'MACD_Hist', 'RSI_14', 'Vol_MA20', '主力籌碼_Q80', '主力籌碼_Q90', '主力籌碼_Q95']).tail(days).copy()
     if len(valid_df) < 5:
@@ -139,25 +135,14 @@ def run_backtest_engine(df, strategy_name, days, posture):
     min_ma = valid_df[['MA5', 'MA14', '50MA']].min(axis=1)
     is_entangled_series = ((max_ma - min_ma) / valid_df['50MA'].replace(0, 0.001)) < 0.025
 
-    closes = valid_df['Close'].values
-    highs = valid_df['High'].values
-    lows = valid_df['Low'].values
-    s_mas = s_ma.values
-    d_mas = d_ma.values
-    m200s = valid_df['200MA'].values
-    r14s = valid_df['ROC14'].values
-    rsis = valid_df['RSI_14'].values
-    vols = valid_df['Volume'].values
-    vol_m20s = valid_df['Vol_MA20'].values
-    m_hists = valid_df['MACD_Hist'].values
-    m_shrinks = valid_df['MACD_Shrink'].values
-    m_flows = valid_df['主力籌碼'].values
-    chip_threshs = valid_df[chip_col].values
+    closes, highs, lows = valid_df['Close'].values, valid_df['High'].values, valid_df['Low'].values
+    s_mas, d_mas, m200s, r14s, rsis = s_ma.values, d_ma.values, valid_df['200MA'].values, valid_df['ROC14'].values, valid_df['RSI_14'].values
+    vols, vol_m20s = valid_df['Volume'].values, valid_df['Vol_MA20'].values
+    m_shrinks, m_hists, m_flows, chip_threshs = valid_df['MACD_Shrink'].values, valid_df['MACD_Hist'].values, valid_df['主力籌碼'].values, valid_df[chip_col].values
     is_entangled_arr = is_entangled_series.values
 
     has_position = False
-    entry_price = 0
-    highest_price_since_entry = 0
+    entry_price, highest_price_since_entry = 0, 0
     total_trades, win_trades = 0, 0
     total_return, total_gross_profit, total_gross_loss = 0.0, 0.0, 0.0
 
@@ -184,8 +169,7 @@ def run_backtest_engine(df, strategy_name, days, posture):
                 if m_flow_p > chip_thresh_p and m_flow_p > 0: is_buy = True
             
             if is_buy:
-                has_position = True
-                entry_price, highest_price_since_entry = close_p, close_p
+                has_position, entry_price, highest_price_since_entry = True, close_p, close_p
                 total_trades += 1
                 trade_logs.append({"交易日期": date_str, "動作狀態": "🟢 買入進場 (BUY)", "執行價格": f"${close_p:.2f}", "單筆報酬": "-"})
                 plot_buys.append((valid_df.index[i], close_p))
@@ -199,19 +183,14 @@ def run_backtest_engine(df, strategy_name, days, posture):
                 elif ("B:" in strategy_name or "C:" in strategy_name) and is_entangled:
                     is_exit, exit_price = True, close_p
             else:
-                if high_p >= m200_p:
-                    is_exit, exit_price = True, m200_p
-                elif low_p <= entry_price * 0.95:
-                    is_exit, exit_price = True, entry_price * 0.95
+                if high_p >= m200_p: is_exit, exit_price = True, m200_p
+                elif low_p <= entry_price * 0.95: is_exit, exit_price = True, entry_price * 0.95
 
             if is_exit:
                 trade_return = (exit_price - entry_price) / entry_price
                 total_return += trade_return
-                if trade_return > 0:
-                    win_trades += 1
-                    total_gross_profit += trade_return
-                else:
-                    total_gross_loss += abs(trade_return)
+                if trade_return > 0: win_trades += 1; total_gross_profit += trade_return
+                else: total_gross_loss += abs(trade_return)
                 has_position = False
                 trade_logs.append({"交易日期": date_str, "動作狀態": "🔴 賣出出場 (SELL)", "執行價格": f"${exit_price:.2f}", "單筆報酬": f"{trade_return*100:+.2f}%"})
                 plot_sells.append((valid_df.index[i], exit_price))
@@ -226,65 +205,28 @@ def run_backtest_engine(df, strategy_name, days, posture):
         elif total_return >= 0.15 or final_win_rate >= 0.50: stars = "⭐⭐⭐⭐"
         else: stars = "⭐⭐"
 
-    latest, prev = valid_df.iloc[-1], valid_df.iloc[-2]
-    close_T = float(latest['Close'])
-    macdHist_T, macdHist_Y = float(latest['MACD_Hist']), float(prev['MACD_Hist'])
-    shortMA_T, shortMA_Y = float(latest[s_ma.name]), float(prev[s_ma.name])
-    ma200_T = float(latest['200MA'])
-    masterFlow_T, masterFlow_Y = float(latest['主力籌碼']), float(prev['主力籌碼'])
-    is_entangled_T = is_entangled_series.iloc[-1]
-
-    radar_text = "💤 狀態不明"
-    if "A:" in strategy_name:
-        power_score = min(100, int(round(abs(((macdHist_T - macdHist_Y) / close_T) * 100) * 333)))
-        if macdHist_T > macdHist_Y and macdHist_T > 0: radar_text = f"🏎️ 狂暴加速 {draw_progress_bar(power_score, '🔥')} {power_score}%"
-        elif macdHist_T < macdHist_Y and macdHist_T > 0: radar_text = f"🔄 多頭減速 {draw_progress_bar(power_score, '💥')} {power_score}%"
-        elif macdHist_T > macdHist_Y and macdHist_T < 0: radar_text = f"🛡️ 下墜煞車 {draw_progress_bar(power_score, '🛡️')} {power_score}%"
-        else: radar_text = f"📉 跌勢加速 {draw_progress_bar(power_score, '💥')} {power_score}%"
-    elif "B:" in strategy_name or "C:" in strategy_name:
-        ma_slope_pct = ((shortMA_T - shortMA_Y) / shortMA_Y) * 100
-        power_score = min(100, int(round(abs(ma_slope_pct) * 200)))
-        if is_entangled_T: radar_text = "💤 毫無波瀾 [░░░░░░░░░░] 盤整 0%"
-        elif ma_slope_pct > 0 and close_T > shortMA_T: radar_text = f"🏎️ 均線昂揚 {draw_progress_bar(power_score, '🔥')} {power_score}%"
-        elif ma_slope_pct <= 0 and close_T > shortMA_T: radar_text = f"🔄 弧度走平 {draw_progress_bar(power_score, '🔸')} {power_score}%"
-        else: radar_text = f"📉 均線下彎 {draw_progress_bar(power_score, '💥')} {power_score}%"
-    elif "D:" in strategy_name:
-        brake_pct, distance_pct = ((macdHist_T - macdHist_Y) / close_T) * 100, ((close_T - ma200_T) / ma200_T) * 100
-        if macdHist_T > macdHist_Y: radar_text = f"🛑 綠柱縮腳 {draw_progress_bar(min(100, int(round(abs(brake_pct)*333))), '🛡️')} {min(100, int(round(abs(brake_pct)*333)))}%"
-        elif distance_pct <= -10: radar_text = f"⏳ 極度超跌 {draw_progress_bar(min(100, int(round(abs(distance_pct)*5))), '📉')} {min(100, int(round(abs(distance_pct)*5)))}%"
-        else: radar_text = "❌ 未達抄底區 [░░░░░░░░░░] 穩定 0%"
-    elif "E:" in strategy_name:
-        chip_grow_pct = ((masterFlow_T - masterFlow_Y) / (abs(masterFlow_Y) if masterFlow_Y != 0 else 1)) * 100
-        power_score = min(100, int(round(abs(chip_grow_pct))))
-        if masterFlow_T > 0 and (masterFlow_T - masterFlow_Y) > 0: radar_text = f"💥 主力搶貨 {draw_progress_bar(power_score, '🔥')} {power_score}%"
-        elif masterFlow_T > 0 and (masterFlow_T - masterFlow_Y) <= 0: radar_text = f"⚠️ 主力續抱 {draw_progress_bar(power_score, '🔸')} {power_score}%"
-        else: radar_text = f"❌ 主力棄守 {draw_progress_bar(power_score, '💥')} {power_score}%"
-
     latest_buy_signal = "🛑 觀望/無訊號"
+    latest = valid_df.iloc[-1]
+    macdHist_T, macdHist_Y = float(latest['MACD_Hist']), float(valid_df.iloc[-2]['MACD_Hist'])
+    close_T = float(latest['Close'])
+    shortMA_T, shortMA_Y = float(latest[s_ma.name]), float(valid_df.iloc[-2][s_ma.name])
+    ma200_T = float(latest['200MA'])
+    masterFlow_T = float(latest['主力籌碼'])
+
     if "A:" in strategy_name and (latest['MACD_Shrink'] >= 1 or (macdHist_T > macdHist_Y and macdHist_T > 0)) and latest['ROC14'] > 0 and latest['RSI_14'] < rsi_max: latest_buy_signal = "🚀 大膽建倉 (BUY)"
-    elif ("B:" in strategy_name or "C:" in strategy_name) and (not is_entangled_T) and close_T > shortMA_T and shortMA_T > shortMA_Y and latest['Volume'] > latest['Vol_MA20'] * vol_mult: latest_buy_signal = "🚀 大膽建倉 (BUY)"
+    elif ("B:" in strategy_name or "C:" in strategy_name) and (not is_entangled_series.iloc[-1]) and close_T > shortMA_T and shortMA_T > shortMA_Y and latest['Volume'] > latest['Vol_MA20'] * vol_mult: latest_buy_signal = "🚀 大膽建倉 (BUY)"
     elif "D:" in strategy_name and ma200_T > 0 and (close_T - ma200_T)/ma200_T <= dip_pct and latest['MACD_Shrink'] >= 1 and latest['RSI_14'] < rsi_min: latest_buy_signal = "🚀 大膽建倉 (BUY)"
     elif "E:" in strategy_name and masterFlow_T > latest[chip_col] and masterFlow_T > 0: latest_buy_signal = "🚀 大膽建倉 (BUY)"
 
-    return radar_text, total_return, final_win_rate, total_trades, pf_str, stars, latest_buy_signal, stop_loss_pct, trade_logs, plot_buys, plot_sells, valid_df
+    return "📡 運算完畢", total_return, final_win_rate, total_trades, pf_str, stars, latest_buy_signal, stop_loss_pct, trade_logs, plot_buys, plot_sells, valid_df
 
-# --- 6. Session State ---
-if "calculated" not in st.session_state:
-    st.session_state.calculated = False
-    st.session_state.final_df = None
-    st.session_state.detail_db = {}
-    st.session_state.last_posture = ""
-
-if st.session_state.calculated and st.session_state.last_posture != market_posture:
-    st.session_state.calculated = False
-
-# --- 7. 網頁分頁系統 ---
-tab_summary, tab_debug = st.tabs(["📊 綜合決策大分流矩陣", "🔍 深度數據與視覺化對照面板"])
+# --- 7. 網頁分頁與渲染系統 ---
+tab_summary, tab_debug = st.tabs(["📊 美股綜合決策大分流矩陣", "🔍 深度數據與視覺化對照面板"])
 
 with tab_summary:
     st.info(f"💡 當前系統姿態：**{market_posture}**。")
     if st.button("🚀 啟動全自動大腦跨標的回測引擎", use_container_width=True):
-        with st.spinner(f"正在以 【{market_posture}】 模式同步執行全球機構級大比對..."):
+        with st.spinner(f"正在以 【{market_posture}】 模式刷新美股大數據..."):
             master_report, strategies = [], ["A: 激進動能型", "B: 穩健波段型", "C: 槓桿防守型", "D: 均值回歸抄底型", "E: 籌碼主力跟隨型"]
             for ticker in ticker_list:
                 df_stock = yf.download(ticker, period="2y", progress=False)
@@ -298,7 +240,7 @@ with tab_summary:
                     st.session_state.detail_db[(ticker, strat)] = {"logs": pd.DataFrame(t_logs), "buys": p_buys, "sells": p_sells, "v_df": v_df}
                     master_report.append({
                         "股票代號": ticker, "當前市價": f"${current_close:.2f}", "策略手法": strat,
-                        "🔮 當前動能雷達 (💥加減速)": radar, "今日決策": buy_signal,
+                        "今日決策": buy_signal,
                         "建議進場價": f"${current_close:.2f}" if "BUY" in buy_signal else "⏳ 觀望中",
                         "嚴格停損價": f"${suggested_sl:.2f}" if "BUY" in buy_signal else "⏳ 觀望中",
                         "預計停利價": f"${suggested_tp:.2f}" if "BUY" in buy_signal else "⏳ 觀望中",
@@ -307,10 +249,21 @@ with tab_summary:
                     })
             st.session_state.final_df = pd.DataFrame(master_report)
             st.session_state.calculated, st.session_state.last_posture = True, market_posture
-            st.success(f"📊 交叉比對完成！")
+            st.success(f"📊 美股大腦交叉比對完成！")
             
     if st.session_state.calculated:
-        st.dataframe(st.session_state.final_df, use_container_width=True, hide_index=True)
+        # 🌟 核心新功能：美股專用高辨識度半透明遮罩 (0.16)
+        def apply_block_shading(df):
+            unique_tickers = df["股票代號"].unique()
+            styles = pd.DataFrame('', index=df.index, columns=df.columns)
+            for i, ticker in enumerate(unique_tickers):
+                bg_color = 'background-color: rgba(128, 128, 128, 0.16)' if i % 2 == 0 else 'background-color: rgba(0, 0, 0, 0)'
+                mask = df["股票代號"] == ticker
+                styles.loc[mask, :] = bg_color
+            return styles
+
+        styled_df = st.session_state.final_df.style.apply(apply_block_shading, axis=None)
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
 with tab_debug:
     st.header("🛠️ 歷史交易明細與 K 線點位檢查器")
