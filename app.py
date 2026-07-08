@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 
 # --- 1. 網頁核心外觀配置 ---
 st.set_page_config(page_title="美股環境感知量化沙盒 V04", page_icon="🔮", layout="wide")
-st.title("🔮 量化投資沙盒完全體 (環境切換 + 雲端清單對比強化版)")
+st.title("🔮 美股量化投資沙盒完全體 (環境切換 + 雲端清單對比強化版)")
 st.markdown("已實裝 **華爾街 Regime-Switching 引擎**、**Google Sheet 遠端連動** 與 **🌟高辨識度智能區塊底色**")
 
 # --- 2. 側邊欄控制台 (保持完美美股雲端連動機制) ---
