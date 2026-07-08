@@ -60,7 +60,7 @@ def draw_progress_bar(score, active_char):
         empty_count = 9
     return f"[{active_char * filled_count}{'░' * empty_count}]"
 
-# --- 4. 技術指標核心計算大腦 (精準保留風控與濾網因子) ---
+# --- 4. 技術指標核心計算大腦 ---
 def calculate_indicators(df):
     high_low_diff = (df['High'] - df['Low']).replace(0, 0.001) 
     mf_multiplier = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / high_low_diff
@@ -107,7 +107,7 @@ def calculate_indicators(df):
     df['MACD_Shrink'] = macd_shrink
     return df
 
-# --- 5. 歷史回測引擎 (精準保留美股大開大合原始設定) ---
+# --- 5. 歷史回測引擎 (精準保留美股大開大合原始風控設定) ---
 def run_backtest_engine(df, strategy_name, days, posture):
     valid_df = df.dropna(subset=['200MA', 'ROC14', 'MACD_Hist', 'RSI_14', 'Vol_MA20', '主力籌碼_Q80', '主力籌碼_Q90', '主力籌碼_Q95']).tail(days).copy()
     if len(valid_df) < 5:
@@ -173,6 +173,8 @@ def run_backtest_engine(df, strategy_name, days, posture):
                 total_trades += 1
                 trade_logs.append({"交易日期": date_str, "動作狀態": "🟢 買入進場 (BUY)", "執行價格": f"${close_p:.2f}", "單筆報酬": "-"})
                 plot_buys.append((valid_df.index[i], close_p))
+            else:
+                pass
         else:
             highest_price_since_entry = max(highest_price_since_entry, high_p)
             is_exit, exit_price = False, close_p
@@ -220,6 +222,16 @@ def run_backtest_engine(df, strategy_name, days, posture):
 
     return "📡 運算完畢", total_return, final_win_rate, total_trades, pf_str, stars, latest_buy_signal, stop_loss_pct, trade_logs, plot_buys, plot_sells, valid_df
 
+# --- 6. 🌟 補回缺失的核心核心：Session State 記憶庫機制 ---
+if "calculated" not in st.session_state:
+    st.session_state.calculated = False
+    st.session_state.final_df = None
+    st.session_state.detail_db = {}
+    st.session_state.last_posture = ""
+
+if st.session_state.calculated and st.session_state.last_posture != market_posture:
+    st.session_state.calculated = False
+
 # --- 7. 網頁分頁與渲染系統 ---
 tab_summary, tab_debug = st.tabs(["📊 美股綜合決策大分流矩陣", "🔍 深度數據與視覺化對照面板"])
 
@@ -252,7 +264,7 @@ with tab_summary:
             st.success(f"📊 美股大腦交叉比對完成！")
             
     if st.session_state.calculated:
-        # 🌟 核心新功能：美股專用高辨識度半透明遮罩 (0.16)
+        # 🌟 實裝高對比度半透明遮罩 (0.16)
         def apply_block_shading(df):
             unique_tickers = df["股票代號"].unique()
             styles = pd.DataFrame('', index=df.index, columns=df.columns)
