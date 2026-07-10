@@ -13,7 +13,7 @@ st.markdown("已實裝 **華爾街 Regime-Switching 引擎**、**智能區塊底
 st.sidebar.header("⚙️ 全自動大掃描設定")
 
 # 🚨🚨🚨 請記得將你的【美股 Google 試算表】共用連結貼在下方的引號裡面 🚨🚨🚨
-GSHEET_URL = "你的_美股_GOOGLE_SHEET_分享連結_貼在這裡"
+GSHEET_URL = "https://docs.google.com/spreadsheets/d/1YuF63YTtUfzGQ70Wu1Bc_xSF9VxBAfFQGYHdP6-WUFk/edit?usp=drive_link"
 
 @st.cache_data(ttl=60)
 def get_tickers_from_sheet(url):
