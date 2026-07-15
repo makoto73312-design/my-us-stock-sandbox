@@ -246,7 +246,11 @@ with tab_summary:
                 if df_stock.empty: continue
                 df_stock.columns = [col[0] if isinstance(col, tuple) else col for col in df_stock.columns]
                 df_stock = calculate_indicators(df_stock)
-                current_close = float(df_stock['Close'].iloc[-1])
+                
+                # 🟢 【V05.1 安全防護補丁】：先剃除沒有收盤價的空白列（解決美股盤前或例假日造成的 NaN 問題）
+                df_temp_clean = df_stock.dropna(subset=['Close'])
+                current_close = float(df_temp_clean['Close'].iloc[-1]) if not df_temp_clean.empty else 0.0
+                
                 for strat in strategies:
                     radar, ret, win, trades, pf, stars, cur_status, sl_price, pnl, t_logs, p_buys, p_sells, v_df = run_backtest_engine(df_stock, strat, backtest_days, market_posture)
                     st.session_state.detail_db[(ticker, strat)] = {"logs": pd.DataFrame(t_logs), "buys": p_buys, "sells": p_sells, "v_df": v_df}
